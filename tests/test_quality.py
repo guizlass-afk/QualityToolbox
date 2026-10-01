@@ -69,6 +69,28 @@ try:
   edge=page.evaluate("""()=>{const c=rows=>QCalc.cep({rows:rows.map(value=>({value})),lsl:0,usl:10});const d=QModels.makeState().tools.msa;return {zero:c([2,2,2]),gaps:c([1,'',3]),realZero:c([0,1,2]),msa:QCalc.msa(d),bad:QCalc.rpn({severity:2.5,occurrence:3,detection:4})};}""")
   assert edge['zero']['cp'] is None and edge['gaps']['sigma'] is None and edge['realZero']['n']==3 and not edge['msa']['complete'] and edge['bad'] is None
   page.locator('a[href="#msa"]').click();paste(page,'[data-mvalue="0:0:0"]','0\t0.5\n1\t1.5');assert page.locator('[data-mvalue="0:0:0"]').input_value()=='0'
+  # Metric/imperial toggle: CEP/MSA numeric fields convert in place; the unit label is read-only and follows the toggle.
+  page.locator('a[href="#cep"]').click();page.wait_for_function("!!document.querySelector('[data-cvalue=\"0\"]')")
+  page.locator('[data-setting="lsl"]').fill('0');page.locator('[data-setting="usl"]').fill('10');page.locator('#toolTitle').click()
+  assert page.locator('html').get_attribute('data-unit')=='mm'
+  assert page.locator('[data-setting="unit"]').input_value()=='mm'
+  assert page.locator('[data-setting="unit"]').get_attribute('readonly') is not None
+  cep_value_mm=float(page.locator('[data-cvalue="1"]').input_value().replace(',','.'))
+  page.locator('#unitToggle').click()
+  assert page.locator('html').get_attribute('data-unit')=='in'
+  assert page.locator('[data-setting="unit"]').input_value()=='in'
+  usl_in=float(page.locator('[data-setting="usl"]').input_value().replace(',','.'));close(usl_in,10/25.4)
+  cep_value_in=float(page.locator('[data-cvalue="1"]').input_value().replace(',','.'));close(cep_value_in,cep_value_mm/25.4)
+  page.locator('a[href="#msa"]').click();page.wait_for_function("!!document.querySelector('[data-mvalue=\"0:0:0\"]')")
+  assert page.locator('[data-setting="unit"]').input_value()=='in'
+  msa_value_in=float(page.locator('[data-mvalue="0:0:0"]').input_value().replace(',','.'));close(msa_value_in,0)
+  page.locator('#unitToggle').click()
+  assert page.locator('html').get_attribute('data-unit')=='mm'
+  assert page.locator('[data-setting="unit"]').input_value()=='mm'
+  page.locator('a[href="#cep"]').click();page.wait_for_function("!!document.querySelector('[data-cvalue=\"0\"]')")
+  assert page.locator('[data-setting="unit"]').input_value()=='mm'
+  close(float(page.locator('[data-setting="usl"]').input_value().replace(',','.')),10)
+  close(float(page.locator('[data-cvalue="1"]').input_value().replace(',','.')),cep_value_mm)
   # Blank workbook must have formulas ready for later input without cached errors.
   page.locator('.project-panel summary').click();page.locator('#newProject').click()
   with page.expect_download() as task:page.locator('#exportAll').click()
